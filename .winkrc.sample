@@ -1,0 +1,17 @@
+{
+    "current_environment": "staging",
+    "production": {
+        "base_url": "https://api.wink.com",
+        "access_token": "",
+        "client_id": "",
+        "client_secret": "",
+        "refresh_token": ""
+    },
+    "staging": {
+        "base_url": "https://staging-api.wink.com",
+        "access_token": "",
+        "client_id": "",
+        "client_secret": "",
+        "refresh_token": ""
+    }
+}
