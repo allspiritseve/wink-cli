@@ -42,7 +42,10 @@ module Wink
     end
 
     def request(method, path, params = {}, headers = {})
-      response = client.send(method, path, params.to_json, headers.merge(default_headers).merge(authorization_headers))
+      unless method.to_sym == :get
+        params = params.to_json
+      end
+      response = client.send(method, path, params, headers.merge(default_headers).merge(authorization_headers))
       log_response(method, path, params, response)
       response
     end
