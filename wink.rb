@@ -3,6 +3,7 @@ require 'faraday_middleware'
 require 'byebug'
 require 'json'
 require 'pp'
+require 'launchy'
 
 module Faraday
   class Response
@@ -51,6 +52,9 @@ module Wink
     end
 
     def request_with_refresh(method, path, params = {}, headers = {})
+      if config.refresh_token == ''
+        raise "Please run `wink authorize` first to obtain an API token"
+      end
       response = request(method, path, params, headers)
       if response.status == 401
         refresh_access_token
@@ -66,6 +70,24 @@ module Wink
 
       define_method("#{method}_with_refresh") do |*args|
         request_with_refresh(method, *args)
+      end
+    end
+
+    def exchange_auth_code(auth_code)
+      body = {
+        client_id: config.client_id,
+        client_secret: config.client_secret,
+        grant_type: 'authorization_code',
+        code: auth_code
+      }
+      response = client.post('/oauth2/token', body.to_json, default_headers)
+      if response.success?
+        data = JSON.parse(response.body).fetch('data')
+        config.access_token = data['access_token']
+        config.refresh_token = data['refresh_token']
+        config.write_file
+      else
+        raise "Could not exchange auth code"
       end
     end
 
@@ -160,6 +182,31 @@ module Wink
       else
         raise "Unknown command: #{command}"
       end
+    end
+
+    def authorize
+      url = "#{config.base_url}/oauth2/authorize?client_id=#{config.client_id}"
+      Launchy.open(url)
+      puts ""
+      puts "Open the following URL in a browser:"
+      puts ""
+      puts url
+      puts "Log in with your Wink credentials, grab the `code` parameter from the redirect URL and paste it here:"
+      puts ""
+      print "Authorization code: "
+      auth_code = STDIN.gets.chomp
+      api.exchange_auth_code(auth_code)
+      credentials
+    end
+
+    def credentials
+      puts ""
+      puts "You have obtained Wink credentials!"
+      puts ""
+      puts "Refresh token: #{config.refresh_token}"
+      puts "Access token: #{config.access_token}"
+      puts ""
+      puts "Try `wink me` to get started."
     end
 
     def me
