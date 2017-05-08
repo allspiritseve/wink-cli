@@ -88,11 +88,16 @@ module Wink
     end
 
     def log_response(method, path, params, response)
+      return unless verbose_logging?
       if method.to_sym == :get
         puts "#{response.env.method.upcase} #{response.env.url} with params #{params.to_json} returned #{response.status}"
       else
         puts "#{response.env.method.upcase} #{response.env.url} returned #{response.status}"
       end
+    end
+
+    def verbose_logging?
+      false
     end
   end
 
@@ -183,9 +188,13 @@ module Wink
 
     private
     def parse_params(*args)
-      args.inject({}) do |memo, arg|
-        key, value = arg.split('=')
-        memo.merge(key => value)
+      if args[0] == '{' && args[-1] == '}'
+        JSON.parse(args.join(' '))
+      else
+        args.inject({}) do |memo, arg|
+          key, value = arg.split('=')
+          memo.merge(key => value)
+        end
       end
     end
 
