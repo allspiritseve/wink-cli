@@ -9,6 +9,12 @@
 ## Example commands
 
 ```
+# obtain Wink credentials
+ruby wink.rb authorize
+
+# view Wink credentials
+ruby wink.rb credentials
+
 # retrieve your user
 ruby wink.rb me
 
