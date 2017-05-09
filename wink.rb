@@ -52,8 +52,8 @@ module Wink
     end
 
     def request_with_refresh(method, path, params = {}, headers = {})
-      if config.refresh_token == ''
-        raise "Please run `wink authorize` first to obtain an API token"
+      unless config.refresh_token?
+        CLI.error "You don't have oauth credentials yet. Please run `configure` or `authorize` first."
       end
       response = request(method, path, params, headers)
       if response.status == 401
@@ -80,15 +80,8 @@ module Wink
         grant_type: 'authorization_code',
         code: auth_code
       }
-      response = client.post('/oauth2/token', body.to_json, default_headers)
-      if response.success?
-        data = JSON.parse(response.body).fetch('data')
-        config.access_token = data['access_token']
-        config.refresh_token = data['refresh_token']
-        config.write_file
-      else
-        raise "Could not exchange auth code"
-      end
+      response = request_oauth_credentials(body)
+      CLI.error "Could not exchange authorization code" unless response.success?
     end
 
     def refresh_access_token
@@ -98,15 +91,19 @@ module Wink
         grant_type: 'refresh_token',
         refresh_token: config.refresh_token
       }
+      response = request_oauth_credentials(body)
+      CLI.error "Could not refresh access token" unless response.success?
+    end
+
+    def request_oauth_credentials(body = {})
       response = client.post('/oauth2/token', body.to_json, default_headers)
       if response.success?
         data = JSON.parse(response.body).fetch('data')
-        config.access_token = data['access_token']
-        config.refresh_token = data['refresh_token']
+        config.access_token = data.fetch('access_token')
+        config.refresh_token = data.fetch('refresh_token')
         config.write_file
-      else
-        raise "Could not refresh access token"
       end
+      response
     end
 
     def log_response(method, path, params, response)
@@ -128,15 +125,17 @@ module Wink
 
     FILENAME = '.winkrc'.freeze
     KEYS = %W(base_url client_id client_secret access_token refresh_token)
+    ENVIRONMENTS = %w(development test staging production)
 
     def initialize
+      create_file
       self.config = read_file
       validate
       write_file
     end
 
     def environment
-      config.fetch('current_environment')
+      config.fetch('current_environment', 'staging')
     end
 
     def environment=(environment)
@@ -155,17 +154,33 @@ module Wink
       define_method("#{key}=") do |value|
         current.store(key, value)
       end
-    end
 
-    def validate
-      unless base_url && client_id && client_secret && access_token && refresh_token
-        puts "Please fill out .winkrc with config values"
-        exit 1
+      define_method("#{key}?") do
+        current.fetch(key).to_s.length > 0
       end
     end
 
-    def read_file
+    def update(attributes = {})
+      attributes.each do |key, value|
+        send("#{key}=", value)
+      end
+      write_file
+    end
+
+    def validate
+      unless base_url? && client_id? && client_secret?
+        CLI.error "Please run `configure`"
+      end
+      unless access_token? && refresh_token?
+        CLI.error "Please run `configure` or `authorize`"
+      end
+    end
+
+    def create_file
       FileUtils.cp('.winkrc.sample', FILENAME) unless File.exist?(FILENAME)
+    end
+
+    def read_file
       JSON.parse(File.read(FILENAME))
     end
 
@@ -175,13 +190,42 @@ module Wink
   end
 
   class CLI
+    def self.error(message)
+      puts ""
+      puts message
+      puts ""
+      exit 1
+    end
+
     def initialize(argv)
       command = argv[0]
       if respond_to?(command)
         puts send(command, *argv[1..-1])
+      elsif respond_to?("#{command}_command")
+        puts send("#{command}_command", *argv[1..-1])
       else
-        raise "Unknown command: #{command}"
+        error "Unknown command: #{command}"
       end
+    end
+
+    def config_command
+      puts ""
+      puts "Environment: #{config.environment}"
+      puts "Client id: #{config.client_id}"
+      puts "Client secret: #{config.client_secret}"
+      puts "Access token: #{config.access_token}"
+      puts "Refresh token: #{config.refresh_token}"
+    end
+
+    def configure
+      puts ""
+      configure_environment
+      config.client_id = prompt("Enter a Wink #{config.environment} client id", config.client_id)
+      config.client_secret = prompt("Enter a Wink #{config.environment} client secret", config.client_secret)
+      config.write_file
+      puts ""
+      puts "Configuration file has been updated"
+      config_command
     end
 
     def authorize
@@ -191,10 +235,10 @@ module Wink
       puts "Open the following URL in a browser:"
       puts ""
       puts url
+      puts ""
       puts "Log in with your Wink credentials, grab the `code` parameter from the redirect URL and paste it here:"
       puts ""
-      print "Authorization code: "
-      auth_code = STDIN.gets.chomp
+      auth_code = prompt("Authorization code")
       api.exchange_auth_code(auth_code)
       credentials
     end
@@ -206,7 +250,7 @@ module Wink
       puts "Refresh token: #{config.refresh_token}"
       puts "Access token: #{config.access_token}"
       puts ""
-      puts "Try `wink me` to get started."
+      puts "Try the `me` command to get started."
     end
 
     def me
@@ -234,6 +278,34 @@ module Wink
     end
 
     private
+    def prompt(label, existing_value = nil)
+      print label
+      if existing_value.to_s.length > 0
+        print " (#{existing_value})"
+      end
+      print ": "
+      input = STDIN.gets.chomp
+      input = existing_value if input == ''
+      input
+    end
+
+    def error(message)
+      self.class.error(message)
+    end
+
+    def configure_environment
+      environment = prompt("Staging or production", config.environment)
+      unless Config::ENVIRONMENTS.include?(environment)
+        if environment = Config::ENVIRONMENTS.detect { |value| value =~ /^#{environment.downcase}/ }
+          puts "Partial match, autocompleting to #{environment}"
+        else
+          environment = config.environment || 'staging'
+          puts "Invalid value, defaulting to #{environment}"
+        end
+      end
+      config.environment = environment
+    end
+
     def parse_params(*args)
       if args[0] == '{' && args[-1] == '}'
         JSON.parse(args.join(' '))
