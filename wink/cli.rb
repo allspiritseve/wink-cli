@@ -4,7 +4,7 @@ require 'rack'
 
 module Wink
   class CLI
-    VERSION = '0.1.6'
+    VERSION = '0.1.7'
 
     def self.error(message)
       puts ""
