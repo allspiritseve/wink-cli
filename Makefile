@@ -1,8 +1,7 @@
-wink_dir = $(shell pwd)
+PREFIX?=/usr/local
 
-install: /usr/local/bin/wink
+install: $(PREFIX)/bin/wink
 
-/usr/local/bin/wink: Makefile
-	@echo '#!/bin/bash\n\ncd ${wink_dir} && bundle exec ruby wink.rb \x24@' > $@
+$(PREFIX)/bin/wink:
+	cp bin/wink $@
 	@chmod +x $@
-	@echo "Wink has been installed to $@"

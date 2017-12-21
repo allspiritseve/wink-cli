@@ -23,7 +23,10 @@ module Wink
         argv.shift
       end
       command = argv[0]
-      if respond_to?(command)
+
+      if !command
+        puts "Hola!"
+      elsif respond_to?(command)
         puts send(command, *argv[1..-1])
       elsif respond_to?("#{command}_command")
         puts send("#{command}_command", *argv[1..-1])
