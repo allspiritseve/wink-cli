@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'wink/cli'
+
+Wink::CLI.new(ARGV).run

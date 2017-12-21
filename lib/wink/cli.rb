@@ -1,7 +1,15 @@
 require "wink/cli/version"
 
 module Wink
-  module Cli
-    # Your code goes here...
+  class CLI
+    attr_accessor :argv
+
+    def initialize(argv)
+      self.argv = argv
+    end
+
+    def run
+      puts 'Hola!'
+    end
   end
 end
