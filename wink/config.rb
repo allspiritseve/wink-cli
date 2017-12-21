@@ -1,3 +1,5 @@
+require 'fileutils'
+
 module Wink
   class Config < Struct.new(:config)
     extend Forwardable
