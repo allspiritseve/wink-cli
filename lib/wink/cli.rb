@@ -2,9 +2,13 @@ require 'launchy'
 require 'json'
 require 'rack'
 
+require 'wink/api'
+
 module Wink
   class CLI
     VERSION = '0.1.5'
+
+    attr_accessor :argv
 
     def self.error(message)
       puts ""
@@ -22,6 +26,10 @@ module Wink
         config.environment = 'production'
         argv.shift
       end
+      self.argv = argv
+    end
+
+    def run
       command = argv[0]
       if respond_to?(command)
         puts send(command, *argv[1..-1])

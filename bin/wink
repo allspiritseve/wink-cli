@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+
+require_relative '../lib/wink/cli'
+
+# Development convenience
+require 'byebug'
+require 'pp'
+
+module Faraday
+  class Response
+    alias_method :to_s, :body
+  end
+end
+
+begin
+  Signal.trap('INT') { abort }
+  Wink::CLI.new(ARGV).run
+rescue => e
+  raise e if $DEBUG
+  STDERR.puts e.message
+  STDERR.puts e.backtrace.join("\n")
+  exit 1
+end
