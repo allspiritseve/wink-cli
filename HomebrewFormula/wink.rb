@@ -5,6 +5,6 @@ class Wink < Formula
   sha256 "b936fb99b7cdfdbef80bdc1ed3c90ede3bf4c90fb8bf48eb0e9a5ae6daee7ee8"
 
   def install
-    system "make", "install"
+    system "make", "install", "PREFIX=#{prefix}"
   end
 end
