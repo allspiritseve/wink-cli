@@ -20,7 +20,7 @@ cd wink-cli
 bundle install
 
 # Create /usr/local/bin/wink (optional)
-make install
+make
 ```
 
 ## Running commands
@@ -37,28 +37,28 @@ wink COMMAND [<options>]
 
 ```bash
 # Set configuration values
-bundle exec wink.rb configure
+wink configure
 
 # View configuration values
-bundle exec wink.rb config
+wink config
 
 # Log in with your browser
-bundle exec wink.rb authorize
+wink authorize
 
 # obtain Wink credentials
-ruby wink.rb authorize
+wink authorize
 
 # view Wink credentials
-ruby wink.rb credentials
+wink credentials
 
 # retrieve your user
-ruby wink.rb me
+wink me
 
 # retrieve your user (manual form)
-ruby wink.rb get /users/me
+wink get /users/me
 
 # update your name
-ruby wink.rb PUT /users/me first_name=Joe last_name=User
+wink PUT /users/me first_name=Joe last_name=User
 ```
 
 ## Tips
