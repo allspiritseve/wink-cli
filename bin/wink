@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/bin/bash
 
-require_relative '../wink.rb'
-
+cd ~/projects/wink-cli
+chruby-exec 2.3.4 -- bundle exec ruby wink.rb $@
